@@ -1,41 +1,53 @@
-version: '3.7'
+version: "3.7"
 
 networks:
-  nextcloud:
-  mariadb:
-    external:
-      name: mariadb
   proxy:
     external:
       name: proxy
 
 services:
+  db:
+    image: mariadb
+    container_name: nextcloud_db
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    restart: always
+
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    environment:
+        - MYSQL_ROOT_PASSWORD=root
+        - MYSQL_PASSWORD=random_password_123
+        - MYSQL_DATABASE=nextcloud
+        - MYSQL_USER=nextcloud
   redis:
-    image: redis:latest 
+    image: redis:latest
     container_name: nextcloud_redis
     restart: always
-    networks:
-      - nextcloud
     volumes:
-      - nextcloud:/var/lib/redis
+      - nextcloud_data:/data
+
   app:
     image: nextcloud
-    container_name: nextcloud
+    container_name: nextcloud_app
     restart: always
     ports:
-      - 5555:443
+      - 8080:80
     networks:
-      - nextcloud
-      - mariadb
       - proxy
+      - default
     depends_on:
       - redis
+      - db
     volumes:
-      - nextcloud:/var/www/html
+      - nextcloud_data:/var/www/html
     environment:
+      - MYSQL_PASSWORD=random_password_123
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_HOST=db
       - REDIS_HOST=redis
       - TRUSTED_PROXIES=172.33.0.0/16
-      - NEXTCLOUD_TRUSTED_DOMAINS=drive.vitoy.xyz
+      - NEXTCLOUD_TRUSTED_DOMAINS=bank.vitoy.xyz
     labels:
       - traefik.enable=true
       - traefik.protocol=http
@@ -44,16 +56,31 @@ services:
       - traefik.http.routers.nextcloud.tls=true
       - traefik.http.routers.nextcloud.entrypoints=websecure
       - traefik.http.routers.nextcloud.tls.certresolver=letsencrypt
-      - traefik.http.routers.nextcloud.rule=Host(`drive.vitoy.xyz`)
+      - traefik.http.routers.nextcloud.rule=Host(`bank.vitoy.xyz`)
       - traefik.http.middlewares.nextcloud.headers.contentSecurityPolicy=frame-ancestors 'self' vitoy.xyz *.vitoy.xyz
       - traefik.http.middlewares.nextcloud.headers.stsSeconds=155520011
       - traefik.http.middlewares.nextcloud.headers.stsIncludeSubdomains=true
       - traefik.http.middlewares.nextcloud.headers.stsPreload=true
       - traefik.http.middlewares.nextcloud-mid.replacepathregex.regex=^/.well-known/ca(l|rd)dav
       - traefik.http.middlewares.nextcloud-mid.replacepathregex.replacement=/remote.php/dav/
+  cron:
+    image: nextcloud
+    container_name: nextcloud_cron
+    restart: always
+    volumes:
+      - nextcloud_data:/var/www/html
+    networks:
+      - proxy
+      - default
+    entrypoint: /cron.sh
+    depends_on:
+      - db
+      - redis
 
- 
 volumes:
-  nextcloud:
+  mariadb_data:
     external:
-      name: nextcloud
+      name: mariadb_data
+  nextcloud_data:
+    external:
+      name: nextcloud_data
