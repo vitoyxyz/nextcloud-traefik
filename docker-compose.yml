@@ -13,12 +13,12 @@ services:
     restart: always
 
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - nextcloud_mariadb:/var/lib/mysql
     environment:
-        - MYSQL_ROOT_PASSWORD=root
-        - MYSQL_PASSWORD=random_password_123
-        - MYSQL_DATABASE=nextcloud
-        - MYSQL_USER=nextcloud
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_PASSWORD=random_password_123
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
   redis:
     image: redis:latest
     container_name: nextcloud_redis
@@ -47,7 +47,7 @@ services:
       - MYSQL_HOST=db
       - REDIS_HOST=redis
       - TRUSTED_PROXIES=172.33.0.0/16
-      - NEXTCLOUD_TRUSTED_DOMAINS=bank.vitoy.xyz
+      - NEXTCLOUD_TRUSTED_DOMAINS=drive.your_domain.com
     labels:
       - traefik.enable=true
       - traefik.protocol=http
@@ -56,8 +56,8 @@ services:
       - traefik.http.routers.nextcloud.tls=true
       - traefik.http.routers.nextcloud.entrypoints=websecure
       - traefik.http.routers.nextcloud.tls.certresolver=letsencrypt
-      - traefik.http.routers.nextcloud.rule=Host(`bank.vitoy.xyz`)
-      - traefik.http.middlewares.nextcloud.headers.contentSecurityPolicy=frame-ancestors 'self' vitoy.xyz *.vitoy.xyz
+      - traefik.http.routers.nextcloud.rule=Host(`drive.your_domain.com`)
+      - traefik.http.middlewares.nextcloud.headers.contentSecurityPolicy=frame-ancestors 'self' your_domain.com *.your_domain.com
       - traefik.http.middlewares.nextcloud.headers.stsSeconds=155520011
       - traefik.http.middlewares.nextcloud.headers.stsIncludeSubdomains=true
       - traefik.http.middlewares.nextcloud.headers.stsPreload=true
@@ -78,9 +78,5 @@ services:
       - redis
 
 volumes:
-  mariadb_data:
-    external:
-      name: mariadb_data
+  nextcloud_mariadb:
   nextcloud_data:
-    external:
-      name: nextcloud_data
