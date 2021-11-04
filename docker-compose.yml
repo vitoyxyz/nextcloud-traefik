@@ -48,6 +48,7 @@ services:
       - REDIS_HOST=redis
       - TRUSTED_PROXIES=172.33.0.0/16
       - NEXTCLOUD_TRUSTED_DOMAINS=drive.your_domain.com
+      - OVERWRITEPROTOCOL=https
     labels:
       - traefik.enable=true
       - traefik.protocol=http
